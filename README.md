@@ -213,6 +213,273 @@ to the internet! Congrats!
 Now we will complete the backend app by creating api routes for our users, writing server methods to add users to our database and
 to login. We will also create a mongodb schema for the User object.
 
+It is nice to visualize the database schema, before connecting routes to it. Go to `./models/user.js` to create a User schema
+with mongoose.
+
+#### user.js
+```
+const mongoose = require('mongoose'),
+    bcrypt = require( 'bcryptjs'),
+    config = require('../config/env');
+
+const UserSchema = mongoose.Schema({
+    name: {
+        type: String
+    },
+    email: {
+        type: String,
+        required: true
+    },
+    username: {
+        type: String,
+        required: true
+    },
+    passwords: {
+        type: String,
+        required: true
+    }
+});
+
+const User = module.exports = mongoose.model('User', UserSchema);
+
+```
+
+We will need to write some routes from the server to the database for our application. These routes should be carefully designed as paths can get long and messy quickly.
+Since, our goal is to add and authenticate users we will need server methods that do the following:
+
+1. register new users to the data base
+2. login and authenticate existing users from the data base
+3. retrieve user profile data from the database
+
+There will be more methods required for more advanced application features, but for now we will start with these three. Go to
+`./api/users.js` and add the following:
+
+#### users.js
+```
+const express = require('express'),
+    router = express.Router(),
+    User = require('../models/user');
+
+
+// ROUTES -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+
+// register new users to the data base
+router.post('/register', (req, res, next) => {
+    let newUser = new User({
+        name: req.body.name,
+        email: req.body.email,
+        username: req.body.username,
+        password: req.body.password
+    });
+
+    User.addUser(newUser, (err, user) => {
+        if(err){
+            res.json({success: false, msg:'Failed to register user'});
+        } else {
+            res.json({success: true, msg:'Successfully registered user'});
+        }
+    });
+});
+
+
+// login and authenticate existing users from the data base
+router.post('/auth', (req, res, next) => {
+    res.send('AUTHENTICATE AND LOGIN PAGE');
+
+    // ADD MAGIC HERE
+
+});
+
+
+// retrieve user profile data from the database
+router.get('/profile', (req, res, next) => {
+    res.send('PROFILE PAGE');
+
+    // ADD MAGIC HERE
+
+});
+
+
+module.exports = router;
+```
+
+Here we have partially defined the three methods mentioned above. Notice that in the `/register` route we first
+instantiate an new user object and then we call the `User.addUser()` method to add it to the database. Lets
+now implment this method using the encryption package `bcrypt`. Go back to `./models/user.js` and add the following:
+
+#### user.js
+```
+const mongoose = require('mongoose'),
+    bcrypt = require( 'bcryptjs'),
+    config = require('../config/env');
+
+const UserSchema = mongoose.Schema({
+    name: {
+        type: String
+    },
+    email: {
+        type: String,
+        required: true
+    },
+    username: {
+        type: String,
+        required: true
+    },
+    passwords: {
+        type: String,
+        required: true
+    }
+});
+
+const User = module.exports = mongoose.model('User', UserSchema);
+
+// .addUser() method
+// adds user to the db
+module.exports.addUser = (newUser, callback) => {
+    bcrypt.genSalt(10, (err, salt) => {
+        bcrypt.hash(newUser.password, salt, (err, hash) => {
+            newUser.password = hash;
+            newUser.save(callback);
+        })
+    })
+}
+```
+
+GREAT! Lets finish implementing the remaining routes and DB methods.
+
+#### users.js
+```
+const express = require('express'),
+    router = express.Router(),
+    User = require('../models/user'),
+    passport = require('passport'),
+    jwt = require('jsonwebtoken'),
+    config = require('../config/env');
+
+
+// ROUTES -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+
+// register new users to the data base
+router.post('/register', (req, res, next) => {
+    let newUser = new User({
+        name: req.body.name,
+        email: req.body.email,
+        username: req.body.username,
+        password: req.body.password
+    });
+
+    User.addUser(newUser, (err, user) => {
+        if(err){
+            res.json({success: false, msg:'Failed to register user'});
+        } else {
+            res.json({success: true, msg:'Successfully registered user'});
+        }
+    });
+});
+
+
+// login and authenticate existing users from the data base
+router.post('/auth', (req, res, next) => {
+    const username = req.body.username;
+    const password = req.body.password;
+
+    User.getUserByUsername(username, (err, user) => {
+        if (err) throw err;
+        if (!user){
+            return res.json({success: false, msg: 'User not found'})
+        }
+
+        User.comparePassword(password, user.password, (err, isMatch) => {
+            if( err ) throw err;
+            if( isMatch ){
+                const token = jwt.sign(user, config.secret, {
+                    expiresIn: 604800 // 1 week
+                });
+
+                res.json({
+                    success: true,
+                    token: 'JWT '+token,
+                    user: {
+                        id: user._id,
+                        name: user.name,
+                        username: user.username,
+                        email: user.email
+                    }
+                });
+            } else {
+                return res.json({success: false, msg: 'Wrong Password'});
+            }
+        })
+    })
+});
+
+
+// retrieve user profile data from the database
+router.get('/profile', passport.authenticate('jwt', {session:false}), (req, res, next) => {
+    res.json({user: req.user});
+});
+
+
+module.exports = router;
+
+```
+
+#### user.js
+```
+const mongoose = require('mongoose');
+const bcrypt = require( 'bcryptjs');
+const config = require('../config/env');
+
+const UserSchema = mongoose.Schema({
+    name: {
+        type: String
+    },
+    email: {
+        type: String,
+        required: true
+    },
+    username: {
+        type: String,
+        required: true
+    },
+    password: {
+        type: String,
+        required: true
+    }
+});
+
+const User = module.exports = mongoose.model('User', UserSchema);
+
+module.exports.getUserById = (id, callback) => {
+    User.findById(id, callback);
+}
+
+module.exports.getUserByUsername = (username, callback) => {
+    const query = {username: username}
+    User.findOne(query, callback);
+}
+
+module.exports.addUser = (newUser, callback) => {
+    bcrypt.genSalt(10, (err, salt) => {
+        bcrypt.hash(newUser.password, salt, (err, hash) => {
+            newUser.password = hash;
+            newUser.save(callback);
+        });
+    });
+}
+
+module.exports.comparePassword = (candidatePassword, hash, callback) => {
+    bcrypt.compare(candidatePassword, hash, (err, isMatch) => {
+        if( err ) throw err;
+        callback(null, isMatch);
+    });
+}
+
+```
+
+
+
+
 
 
 
