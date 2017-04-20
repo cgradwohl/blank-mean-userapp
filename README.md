@@ -1,11 +1,12 @@
 # Tutorial: How to build a backend with node and mongodb.
 
 In this tutorial we will build a server, design an api. connect to a mongodb, create users and authenticate users, all
-in the NODE environment. There are a ton of great tutorials about this topic and I hope that this tutorial will be added to that
+in the NODE environment. Finally we will deploy to Heroku. There are a ton of great tutorials about this topic and I hope that this tutorial will be added to that
 list!
 
 *** DISCLAIMER: You must have node.js, npm, and mongodb installed and you should be familiar with these technologies
-before proceeding***
+before proceeding. You should also signup for a free Heroku account and navigate to your heroku dashboard. Finally make sure you
+have HerokuCLI installed***
 
 To start off we want to create a functional directory structure that will allow us to separate concerns as the app
 grows in the future. There are several ways this can be done, and I am still learning new and better ways to structure
@@ -20,6 +21,7 @@ simple user based application.
 --models
 ----user.js
 --api
+----index.js
 ----users.js
 app.js
 package.json
@@ -70,5 +72,107 @@ node_modules/
 ```
 
 Now install these dependancies: `$ npm install`
+
+Finally we can write some code! Lets start building the express server file `app.js`
+#### app.js
+```
+const express = require('express'),
+    cors = require('cors'),
+    bodyParser = require('body-parser'),
+	mongoose = require('mongoose'),
+    methodOverride = require('method-override'),
+    path = require('path');
+
+
+const app = express();
+
+// ENVIRONMENT CONFIG
+const env = process.env.NODE_ENV = process.env.NODE_ENV || 'development',
+	envConfig = require('./config/environment')[env];
+
+
+// CONNECT TO DB
+mongoose.connect(envConfig.db);
+
+
+// EXPRESS CONFIG
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cors());
+app.use(methodOverride());
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// ROUTES
+const users = require('./api/users');
+app.use('/users', users);
+
+require('./api/index')(app);
+
+// Start server
+app.listen(envConfig.port, function(){
+  console.log('Server listening on port ' + envConfig.port)
+});
+```
+
+This is the main file that will run when a client makes a request to our express server. First we will configure
+our express environment which is being called from `app.js` here:
+
+```
+// ENVIRONMENT CONFIG
+const env = process.env.NODE_ENV = process.env.NODE_ENV || 'development',
+	envConfig = require('./config/environment')[env];
+```
+
+Navigate to `./config/env.js`
+
+#### env.js
+```
+const path = require('path'),
+	rootPath = path.normalize(__dirname + '/../../');
+
+module.exports = {
+    development: {
+        rootPath: rootPath,
+        db: 'mongodb://localhost:27017/testDB',
+        secret: 'abc123',
+        port: process.env.PORT || 3000
+    },
+    production: {
+        rootPath: rootPath,
+        db: 'mongodb://admin:abc123@ds111851.mlab.com:11851/heroku_0f5rg3zd',
+        secret: 'abc123',
+        port: process.env.PORT || 80
+    }
+}
+```
+NOTE that you will have a different db URI for you production environment.
+Since this app will be deployed to Heroku, we can use a free and easy mongodb deployment called mLab. Navigate
+to your Heroku dashboard and in the right hand corner select New-->Create new app. Name you app the same thing
+you named your project folder then click Create App. Select your app from your Personal Apps list and then
+click the Resources tab in the toolbar. Navigate to the Add-ons search bar and type in: mLab. Add a free mLab
+sandbox instance to your project.
+
+Finally follow the instructions on the mLab website to create a user and user password for your production
+mongodb instance. Copy and paste you instance URI with your username and user password like I did above.
+In my example above my db username is: 'admin' and my db username password is: 'abc123'.
+
+Ok! The environment config should be done for now! Lets move onto building out some api routes!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Resources
 
 https://nodejs.org/en/docs/guides/anatomy-of-an-http-transaction/

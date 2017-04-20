@@ -13,6 +13,7 @@
     "cors": "*",
     "express": "*",
     "jsonwebtoken": "*",
+    "method-override": "*",
     "mongoose": "*",
     "nodemon": "*",
     "passport": "*",
