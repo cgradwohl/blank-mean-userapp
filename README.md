@@ -1,4 +1,4 @@
-# Tutorial: How to build a backend with node and mongodb.
+# Tutorial: How to build a backend with Node, MongoDB and how to authenticate users with JSON Web Tokens.
 
 In this tutorial we will build a server, design an api. connect to a mongodb, create users and authenticate users with JSON Web Tokens, all in the NODE environment. Finally we will setup and deploy to Heroku. There are a ton of great tutorials about this topic and I hope that this tutorial will be added to that
 list!
