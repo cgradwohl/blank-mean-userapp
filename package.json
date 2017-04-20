@@ -1,0 +1,11 @@
+{
+  "name": "blank-mean-userapp",
+  "version": "1.0.0",
+  "description": "build server, design api, connect to mongodb, add and authenticate users FROM SCRATCH",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Christopher S. Gradwohl",
+  "license": "ISC"
+}
