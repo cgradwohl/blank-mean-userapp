@@ -1,7 +1,6 @@
 # Tutorial: How to build a backend with node and mongodb.
 
-In this tutorial we will build a server, design an api. connect to a mongodb, create users and authenticate users, all
-in the NODE environment. Finally we will deploy to Heroku. There are a ton of great tutorials about this topic and I hope that this tutorial will be added to that
+In this tutorial we will build a server, design an api. connect to a mongodb, create users and authenticate users with JSON Web Tokens, all in the NODE environment. Finally we will setup and deploy to Heroku. There are a ton of great tutorials about this topic and I hope that this tutorial will be added to that
 list!
 
 *** DISCLAIMER: You must have node.js, npm, and mongodb installed and you should be familiar with these technologies
@@ -635,6 +634,7 @@ module.exports = router;
 
 Finally update your `app.js` file:
 
+#### app.js
 ```
 const express = require('express'),
     cors = require('cors'),
@@ -692,7 +692,35 @@ app.use('/users', users);
 app.listen(envConfig.port, function(){
   console.log('Server listening on port ' + envConfig.port)
 });
-```  
+```
+
+Now that the JWT should be able to allow access to the user. To test this lets use postman.
+
+1. select GET and type in `http://localhost:3000/users/profile`
+2. Set the header key to 'Authorization' and set the header value to the JWT token you got when you tested the authentication.
+    - this token should be a very long string that starts with `JWT ` followed by a space.
+    - mine looks like this:
+    ```
+    JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyIkX18iOnsic3RyaWN0TW9kZSI6dHJ1ZSwic2VsZWN0ZWQiOnt9LCJnZXR0ZXJzIjp7fSwid2FzUG9wdWxhdGVkIjpmYWxzZSwiYWN0aXZlUGF0aHMiOnsicGF0aHMiOnsicGFzc3dvcmQiOiJpbml0IiwidXNlcm5hbWUiOiJpbml0IiwiZW1haWwiOiJpbml0IiwiX192IjoiaW5pdCIsIm5hbWUiOiJpbml0IiwiX2lkIjoiaW5pdCJ9LCJzdGF0ZXMiOnsiaWdub3JlIjp7fSwiZGVmYXVsdCI6e30sImluaXQiOnsiX192Ijp0cnVlLCJwYXNzd29yZCI6dHJ1ZSwidXNlcm5hbWUiOnRydWUsImVtYWlsIjp0cnVlLCJuYW1lIjp0cnVlLCJfaWQiOnRydWV9LCJtb2RpZnkiOnt9LCJyZXF1aXJlIjp7fX0sInN0YXRlTmFtZXMiOlsicmVxdWlyZSIsIm1vZGlmeSIsImluaXQiLCJkZWZhdWx0IiwiaWdub3JlIl19LCJlbWl0dGVyIjp7ImRvbWFpbiI6bnVsbCwiX2V2ZW50cyI6e30sIl9ldmVudHNDb3VudCI6MCwiX21heExpc3RlbmVycyI6MH19LCJpc05ldyI6ZmFsc2UsIl9kb2MiOnsiX192IjowLCJwYXNzd29yZCI6IiQyYSQxMCRSeGdsbkxuZ2M1RE9DUGNiMDRLaWp1WC9Qa3lsMGlBUW1RNElRSGxxeWhZRTh4TFhwcThCTyIsInVzZXJuYW1lIjoiak1hbiIsImVtYWlsIjoiZHVkZUBicm8uY29tIiwibmFtZSI6IkpvaG4gRG9lIiwiX2lkIjoiNThmOTMwZDAyNzIzODExYmI5NTIxN2IwIn0sImlhdCI6MTQ5MjcyNzgzNiwiZXhwIjoxNDkzMzMyNjM2fQ.3Ne607FBH0TdM3D5a9akQVTWwPSWw5XXCZzKkdGjgow
+    ```
+3. Press 'Send'
+
+You should receive the following in the response header file body:
+```
+{"user":{"_id":"58f930d02723811bb95217b0","name":"John Doe","email":"dude@bro.com","username":"jMan","password":"$2a$10$RxglnLngc5DOCPcb04KijuX/Pkyl0iAQmQ4IQHlqyhYE8xLXpq8BO","__v":0}}
+```
+
+Since our app is up and running we can now push to production!
+
+Run `$ git push heroku master` and visit your apps url.
+
+
+This concludes the tutorial! CONGRATS! If you have made it this far, then you have learned how to start a MEAN application from
+scratch! We created our application directory structure, we setup our Node Environment, wrote our Express server, connected to a MongoDB instance both locally and remotely with mLab and Heroku. We setup a Heroku application and pushed to production. We then
+wrote some api and database logic for users, and finally we authenticated users using Passport and JSON Web Tokens. This is a
+great start to deploy any type of user authenticated app and this project is now ready to add a frontend framework like Angular or library like React. I hope you had fun and learned a few things along the way!  
+
+
 
 
 
@@ -713,3 +741,4 @@ http://mongoosejs.com/
 https://www.npmjs.com/package/bcrypt
 https://www.getpostman.com/
 https://jwt.io/
+http://passportjs.org/
