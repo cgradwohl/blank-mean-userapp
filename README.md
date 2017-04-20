@@ -23,6 +23,8 @@ simple user based application.
 --api
 ----index.js
 ----users.js
+--public
+----index.html
 app.js
 package.json
 ```
@@ -56,6 +58,7 @@ AWESOME! Next, we will add some dependances and a `.gitignore` file.
     "cors": "*",
     "express": "*",
     "jsonwebtoken": "*",
+    "method-override": "*",
     "mongoose": "*",
     "nodemon": "*",
     "passport": "*",
@@ -88,7 +91,7 @@ const app = express();
 
 // ENVIRONMENT CONFIG
 const env = process.env.NODE_ENV = process.env.NODE_ENV || 'development',
-	envConfig = require('./config/environment')[env];
+	envConfig = require('./config/env')[env];
 
 
 // CONNECT TO DB
@@ -100,19 +103,21 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 app.use(methodOverride());
-app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // ROUTES
-const users = require('./api/users');
-app.use('/users', users);
+// set server to serve static folder, which automatically looks for an index.html
+app.use(express.static(path.join(__dirname, 'public')));
 
-require('./api/index')(app);
+// set the api users path
+/*const users = require('./api/users');
+app.use('/users', users);*/
 
 // Start server
 app.listen(envConfig.port, function(){
   console.log('Server listening on port ' + envConfig.port)
 });
+
 ```
 
 This is the main file that will run when a client makes a request to our express server. First we will configure
@@ -157,7 +162,27 @@ Finally follow the instructions on the mLab website to create a user and user pa
 mongodb instance. Copy and paste you instance URI with your username and user password like I did above.
 In my example above my db username is: 'admin' and my db username password is: 'abc123'.
 
-Ok! The environment config should be done for now! Lets move onto building out some api routes!
+Ok! The environment config should be done for now! Lets create an `index.html` file for our express server to serve!
+
+Go to `./public/index.html`
+
+#### index.html
+```
+HELLO WORLD!
+```
+
+Now let's test out our new sever. Make sure that the following is commented out, since we have not created the users routes yet.
+```
+// set the api users path
+/*const users = require('./api/users');
+app.use('/users', users);*/
+```
+
+Start the mongodb local instance: `$ mongod`
+
+Run: `$ npm install && npm start`
+
+Navigate to `http://localhost:3000/` in your browser. You should see 'HELLO WORLD!'' on the the page.
 
 
 
