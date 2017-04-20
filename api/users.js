@@ -3,7 +3,8 @@ const express = require('express'),
     User = require('../models/user'),
     passport = require('passport'),
     jwt = require('jsonwebtoken'),
-    config = require('../config/env');
+    env = process.env.NODE_ENV = process.env.NODE_ENV || 'development',
+    config = require('../config/env')[env];
 
 
 // ROUTES -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
@@ -64,6 +65,7 @@ router.post('/auth', (req, res, next) => {
 
 
 // retrieve user profile data from the database
+// this is a protected route using passport-jwt
 router.get('/profile', passport.authenticate('jwt', {session:false}), (req, res, next) => {
     res.json({user: req.user});
 });

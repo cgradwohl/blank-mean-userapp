@@ -95,6 +95,7 @@ const env = process.env.NODE_ENV = process.env.NODE_ENV || 'development',
 
 
 // CONNECT TO DB
+mongoose.Promise = global.Promise;
 mongoose.connect(envConfig.db);
 
 
@@ -354,7 +355,8 @@ const express = require('express'),
     User = require('../models/user'),
     passport = require('passport'),
     jwt = require('jsonwebtoken'),
-    config = require('../config/env');
+    env = process.env.NODE_ENV = process.env.NODE_ENV || 'development',
+    config = require('../config/env')[env];
 
 
 // ROUTES -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
@@ -415,10 +417,10 @@ router.post('/auth', (req, res, next) => {
 
 
 // retrieve user profile data from the database
+// this is a protected route using passport-jwt
 router.get('/profile', passport.authenticate('jwt', {session:false}), (req, res, next) => {
     res.json({user: req.user});
 });
-
 
 module.exports = router;
 
@@ -474,19 +476,223 @@ module.exports.comparePassword = (candidatePassword, hash, callback) => {
         callback(null, isMatch);
     });
 }
-
 ```
 
+Now that our server to db logic is done we can test to see if it works. A fast and easy way to do this is to make a post
+request using a free tool called postman. https://www.getpostman.com/ Download and install postman then do the following:
+
+1. Make a POST request to our server
+    - select POST and type in `http://localhost:3000/users/register`
+2. Set the header key to 'Content-Type' and set the header value to 'application/json'
+3. Set the Body of the header file to 'raw', and then copy and paste the following:    
+```
+{
+	"name":"John Doe",
+	"email":"dude@bro.com",
+	"username": "jMan",
+	"password": "abc123"
+}
+```
+Hopefully you see the following in the response header `{"success":true,"msg":"Successfully registered user"}`.
+
+Now lets test the authentication for the new user we just added to the database. Make a new POST request to our server:
+
+1. select POST and type in `http://localhost:3000/users/auth`
+2. Set the header key to 'Content-Type' and set the header value to 'application/json'
+3. Set the Body of the header file to 'raw', and then copy and paste the following:
+```
+{
+	"username":"jMan",
+	"password":"abc123"
+}
+```
+
+In the Response header body you should now see something like the following:
+```
+{"success":true,"token":"JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyIkX18iOnsic3RyaWN0TW9kZSI6dHJ1ZSwic2VsZWN0ZWQiOnt9LCJnZXR0ZXJzIjp7fSwid2FzUG9wdWxhdGVkIjpmYWxzZSwiYWN0aXZlUGF0aHMiOnsicGF0aHMiOnsicGFzc3dvcmQiOiJpbml0IiwidXNlcm5hbWUiOiJpbml0IiwiZW1haWwiOiJpbml0IiwiX192IjoiaW5pdCIsIm5hbWUiOiJpbml0IiwiX2lkIjoiaW5pdCJ9LCJzdGF0ZXMiOnsiaWdub3JlIjp7fSwiZGVmYXVsdCI6e30sImluaXQiOnsiX192Ijp0cnVlLCJwYXNzd29yZCI6dHJ1ZSwidXNlcm5hbWUiOnRydWUsImVtYWlsIjp0cnVlLCJuYW1lIjp0cnVlLCJfaWQiOnRydWV9LCJtb2RpZnkiOnt9LCJyZXF1aXJlIjp7fX0sInN0YXRlTmFtZXMiOlsicmVxdWlyZSIsIm1vZGlmeSIsImluaXQiLCJkZWZhdWx0IiwiaWdub3JlIl19LCJlbWl0dGVyIjp7ImRvbWFpbiI6bnVsbCwiX2V2ZW50cyI6e30sIl9ldmVudHNDb3VudCI6MCwiX21heExpc3RlbmVycyI6MH19LCJpc05ldyI6ZmFsc2UsIl9kb2MiOnsiX192IjowLCJwYXNzd29yZCI6IiQyYSQxMCRSeGdsbkxuZ2M1RE9DUGNiMDRLaWp1WC9Qa3lsMGlBUW1RNElRSGxxeWhZRTh4TFhwcThCTyIsInVzZXJuYW1lIjoiak1hbiIsImVtYWlsIjoiZHVkZUBicm8uY29tIiwibmFtZSI6IkpvaG4gRG9lIiwiX2lkIjoiNThmOTMwZDAyNzIzODExYmI5NTIxN2IwIn0sImlhdCI6MTQ5MjcyNzgzNiwiZXhwIjoxNDkzMzMyNjM2fQ.3Ne607FBH0TdM3D5a9akQVTWwPSWw5XXCZzKkdGjgow","user":{"id":"58f930d02723811bb95217b0","name":"John Doe","username":"jMan","email":"dude@bro.com"}}
+```
+
+Now that the user has been authenticated, it would be nice if the user can view his profile information. Since we are using
+JSON Web Tokens to authenticate users, we need to pass authenticated token to the protected route we made in `./api/users.js`:
+```
+// retrieve user profile data from the database
+// this is a protected route using passport-jwt
+router.get('/profile', passport.authenticate('jwt', {session:false}), (req, res, next) => {
+    res.json({user: req.user});
+});
+```
+
+So to pass the authentication token, we need to write a passport authentication strategy for JSON Web Tokens. Let's configure our
+passport strategy, which will be in `./config/passport.js`. Add the following:
+
+#### passport.js
+```
+const JwtStrategy = require('passport-jwt').Strategy;
+const ExtractJwt = require('passport-jwt').ExtractJwt;
+const User = require('../models/user');
+const env = process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+const config = require('../config/env')[env];
+
+module.exports = (passport) => {
+    let opts = {}
+    opts.jwtFromRequest = ExtractJwt.fromAuthHeader();
+    opts.secretOrKey = config.secret;
+    passport.use(new JwtStrategy(opts, (jwt_payload, done) => {
+        User.getUserById(jwt_payload._doc._id, (err, user) => {
+            if(err){
+                return done(err, false);
+            }
+
+            if(user){
+                return done(null, user);
+            } else {
+                return done(null, false);
+            }
+        });
+    }));
+}
+```  
+
+Make sure to update your `./api/users.js` file is as follows:
+
+#### users.js
+```
+const express = require('express'),
+    router = express.Router(),
+    User = require('../models/user'),
+    passport = require('passport'),
+    jwt = require('jsonwebtoken'),
+    env = process.env.NODE_ENV = process.env.NODE_ENV || 'development',
+    config = require('../config/env')[env];
+
+
+// ROUTES -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+
+// register new users to the data base
+router.post('/register', (req, res, next) => {
+    let newUser = new User({
+        name: req.body.name,
+        email: req.body.email,
+        username: req.body.username,
+        password: req.body.password
+    });
+
+    User.addUser(newUser, (err, user) => {
+        if(err){
+            res.json({success: false, msg:'Failed to register user'});
+        } else {
+            res.json({success: true, msg:'Successfully registered user'});
+        }
+    });
+});
+
+
+// login and authenticate existing users from the data base
+router.post('/auth', (req, res, next) => {
+    const username = req.body.username;
+    const password = req.body.password;
+
+    User.getUserByUsername(username, (err, user) => {
+        if (err) throw err;
+        if (!user){
+            return res.json({success: false, msg: 'User not found'})
+        }
+
+        User.comparePassword(password, user.password, (err, isMatch) => {
+            if( err ) throw err;
+            if( isMatch ){
+                const token = jwt.sign(user, config.secret, {
+                    expiresIn: 604800 // 1 week
+                });
+
+                res.json({
+                    success: true,
+                    token: 'JWT '+token,
+                    user: {
+                        id: user._id,
+                        name: user.name,
+                        username: user.username,
+                        email: user.email
+                    }
+                });
+            } else {
+                return res.json({success: false, msg: 'Wrong Password'});
+            }
+        })
+    })
+});
+
+
+// retrieve user profile data from the database
+// this is a protected route using passport-jwt
+router.get('/profile', passport.authenticate('jwt', {session:false}), (req, res, next) => {
+    res.json({user: req.user});
+});
+
+
+module.exports = router;
+```
+
+Finally update your `app.js` file:
+
+```
+const express = require('express'),
+    cors = require('cors'),
+    bodyParser = require('body-parser'),
+	mongoose = require('mongoose'),
+    methodOverride = require('method-override'),
+    path = require('path'),
+    passport = require('passport');
 
 
 
+// ENVIRONMENT CONFIG
+const env = process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+const envConfig = require('./config/env')[env];
 
 
 
+// CONNECT TO DB
+mongoose.Promise = global.Promise;
+mongoose.connect(envConfig.db);
 
 
 
+// EXPRESS CONFIG
+const app = express();
 
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cors());
+app.use(methodOverride());
+/*app.use(express.static(path.join(__dirname, 'dist')));*/
+
+
+
+// PASSPORT CONFIG
+app.use(passport.initialize());
+app.use(passport.session());
+require('./config/passport')(passport);
+
+
+
+// ROUTES
+// sets server to serve static folder, which automatically looks for an index.html
+app.use(express.static(path.join(__dirname, 'public')));
+
+
+
+// SET USERS PATH
+const users = require('./api/users');
+app.use('/users', users);
+
+
+
+// START SERVER
+app.listen(envConfig.port, function(){
+  console.log('Server listening on port ' + envConfig.port)
+});
+```  
 
 
 
@@ -499,3 +705,11 @@ module.exports.comparePassword = (candidatePassword, hash, callback) => {
 ## Resources
 
 https://nodejs.org/en/docs/guides/anatomy-of-an-http-transaction/
+https://github.com/connor11528
+https://risingstack.com/
+https://scotch.io/
+https://www.mongodb.com/
+http://mongoosejs.com/
+https://www.npmjs.com/package/bcrypt
+https://www.getpostman.com/
+https://jwt.io/
