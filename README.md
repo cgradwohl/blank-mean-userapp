@@ -69,7 +69,7 @@ AWESOME! Next, we will add some dependances and a `.gitignore` file.
 }
 ```
 
-####.gitignore
+#### .gitignore
 ```
 node_modules/
 ```
@@ -103,7 +103,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 app.use(methodOverride());
-app.use(express.static(path.join(__dirname, 'dist')));
+/*app.use(express.static(path.join(__dirname, 'dist')));*/
 
 // ROUTES
 // set server to serve static folder, which automatically looks for an index.html
@@ -151,11 +151,26 @@ module.exports = {
     }
 }
 ```
-NOTE that you will have a different db URI for you production environment.
-Since this app will be deployed to Heroku, we can use a free and easy mongodb deployment called mLab. Navigate
+NOTE that you will have a different db URI for your production environment.
+Since this app will be deployed to Heroku, we can use a free and easy mongodb deployment service called mLab. Navigate
 to your Heroku dashboard and in the right hand corner select New-->Create new app. Name you app the same thing
-you named your project folder then click Create App. Select your app from your Personal Apps list and then
-click the Resources tab in the toolbar. Navigate to the Add-ons search bar and type in: mLab. Add a free mLab
+you named your project folder then click Create App. Follow the instructions to add heroku to your project folder,
+I like to use the terminal and the HerokuCLI. Once Heroku is added you should check to make sure there is a remote
+heroku git url.
+
+Run `$ git remote -v show`
+
+You should see the heroku path URL AND your github path URL. Yours may look something like this.
+```
+heroku  https://git.heroku.com/blank-mean-userapp.git (fetch)
+heroku  https://git.heroku.com/blank-mean-userapp.git (push)
+origin  https://github.com/cgradwohl/blank-mean-userapp.git (fetch)
+origin  https://github.com/cgradwohl/blank-mean-userapp.git (push)
+```
+
+
+Now, select your app from your Personal Apps list on your heroku dashboard and then
+click the Resources tab in the toolbar. Navigate to the Add-ons search bar and type in: 'mLab'. Add a free mLab
 sandbox instance to your project.
 
 Finally follow the instructions on the mLab website to create a user and user password for your production
@@ -180,9 +195,25 @@ app.use('/users', users);*/
 
 Start the mongodb local instance: `$ mongod`
 
-Run: `$ npm install && npm start`
+Run: `$ npm install`
+Run: `$ npm start`
 
 Navigate to `http://localhost:3000/` in your browser. You should see 'HELLO WORLD!'' on the the page.
+
+Now lets add our changes to git, push them to github and then deploy to Heroku:
+`$ git add . && git commit -m "server now serves public index.html" `
+`$ git push`
+`$ git push heroku master`
+
+Navigate to your heroku apps url.
+
+WOOHOO! If you see HELLO WORLD! on the localhost and on the heroku app url then you have successfully deployed an express application
+to the internet! Congrats!
+
+Now we will complete the backend app by creating api routes for our users, writing server methods to add users to our database and
+to login. We will also create a mongodb schema for the User object.
+
+
 
 
 

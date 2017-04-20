@@ -22,15 +22,15 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 app.use(methodOverride());
-app.use(express.static(path.join(__dirname, 'dist')));
+/*app.use(express.static(path.join(__dirname, 'dist')));*/
 
 // ROUTES
 // set server to serve static folder, which automatically looks for an index.html
 app.use(express.static(path.join(__dirname, 'public')));
 
 // set the api users path
-/*const users = require('./api/users');
-app.use('/users', users);*/
+const users = require('./api/users');
+app.use('/users', users);
 
 // Start server
 app.listen(envConfig.port, function(){
